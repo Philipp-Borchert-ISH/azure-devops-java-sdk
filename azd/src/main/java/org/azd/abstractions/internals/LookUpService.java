@@ -6,6 +6,7 @@ import org.azd.common.types.ResourceAreas;
 import org.azd.exceptions.AzDException;
 import org.azd.http.ClientRequest;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -19,8 +20,9 @@ public class LookUpService {
      */
     private final static String id = "e81700f7-3be2-46de-8624-2eb35882fcaa";
     private final static String area = "location";
-    private static final Map<String, LocationUrl> resourceAreasCache = new HashMap<>();
-    private static volatile LookUpService instance;
+    private final Map<String, LocationUrl> resourceAreasCache = new HashMap<>();
+    private static final Map<AccessTokenCredential, LookUpService> instances = Collections.synchronizedMap(new HashMap<>());
+    private static final Object lock = new Object();
     private final AccessTokenCredential accessTokenCredential;
 
     private LookUpService(AccessTokenCredential accessTokenCredential) {
@@ -34,10 +36,12 @@ public class LookUpService {
      */
     public static LookUpService getInstance(AccessTokenCredential accessTokenCredential) {
         Objects.requireNonNull(accessTokenCredential);
+        LookUpService instance = instances.get(accessTokenCredential);
         if (instance == null) {
-            synchronized (LookUpService.class) {
-                if (instance == null) {
+            synchronized (lock) {
+                if ((instance = instances.get(accessTokenCredential)) == null) {
                     instance = new LookUpService(accessTokenCredential);
+                    instances.put(accessTokenCredential, instance);
                 }
             }
         }
